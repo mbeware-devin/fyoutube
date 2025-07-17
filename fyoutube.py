@@ -7,10 +7,7 @@ Downloads all videos from a playlist with subtitles, chapters, and custom naming
 # https://www.youtube.com/feeds/videos.xml?channel_id=UCxkM67T_Iele-mRVUiBkRqg -o /mnt/AllVideo/0082-youtube
 
 import sys
-import datetime
 import subprocess
-import argparse
-from pathlib import Path
 
 #def download_playlist(playlist_url, output_dir="."):
 def download_playlist():    
