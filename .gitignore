@@ -1,8 +1,3 @@
-temp:tmp
 from alive_progress.py
-all_video_ids.txt
 GetVidInfo.py
 subscriptions.md
-subscriptions.original.md
-subscriptions2.md
-ids
