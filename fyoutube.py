@@ -3,7 +3,7 @@
 import os
 import sys
 import subprocess
-
+import time
 
 SLEEP_SUBTITLES = '1'
 SLEEP_INTERVAL = '10'
@@ -74,6 +74,8 @@ def download_playlist(url):
             '--progress',
             '--xattrs',
             '--match-filters', '!is_live',
+            '--match-filters', "live_status!='is_upcoming'" ,
+            '--match-filters', "live_status!='not_live'" ,
             '--no-abort-on-error',
             '--check-formats',
 #            '--verbose',
@@ -96,25 +98,21 @@ def download_playlist(url):
         sys.exit(1)
 
 def main():
+    while True:
+        urls = []
+        with open(SUBSCRIPTIONS_FILE, 'r') as f:
+            urls = f.readlines()    
 
-
-
-
-
-    urls = []
-    with open(SUBSCRIPTIONS_FILE, 'r') as f:
-        urls = f.readlines()    
-
-    for url in urls:  
-        url = url.strip()
-        if url: # Check if the line is not empty
-            cname = url.split('@')[1]             
-            archive_file = f'{ARCHIVE_DIR}/archive_{cname}.md'
-            if not os.path.exists(archive_file): #Don't download old videos
-                InfoFromPlaylist(url)
-            else:
-                download_playlist(url)
-   
+        for url in urls:  
+            url = url.strip()
+            if url: # Check if the line is not empty
+                cname = url.split('@')[1]             
+                archive_file = f'{ARCHIVE_DIR}/archive_{cname}.md'
+                if not os.path.exists(archive_file): #Don't download old videos
+                    InfoFromPlaylist(url)
+                else:
+                    download_playlist(url)
+        time.sleep(3600)  # Sleep for a while before checking again
 
 if __name__ == "__main__":
     main()
@@ -122,6 +120,8 @@ if __name__ == "__main__":
 
 
 ####
+# Todo : Split the code in two processe. One will build the list of videos to download and the other will download them.
+# Todo : Use yt-dlp python API instead of subprocess
 # Todo : Configuration files in OS appropriate locations
 # Todo : Metadata files in OS appropriate locations
 # Todo : Use a proper logging library instead of print statements
@@ -130,7 +130,6 @@ if __name__ == "__main__":
 # Todo : Set configuration from command line arguments
 # Todo : Use a proper package manager for Python
 # Todo : Use a proper package manager for Python dependencies     
-# Todo : Use yt-dlp python API instead of subprocess
 # Todo : GUI to manage subscriptions and configurations
 # Todo : Include Extract channel to get all the subscriptions
 # Todo : Hook to run after download is complete

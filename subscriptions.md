@@ -126,3 +126,5 @@ https://www.youtube.com/@techtangentsii
 https://www.youtube.com/@TheArtOfTheTerminal
 https://www.youtube.com/@TheCodingGopher
 https://www.youtube.com/@the_jenna
+https://www.youtube.com/@decapsulate
+https://www.youtube.com/@NoBoilerplate
