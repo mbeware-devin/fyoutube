@@ -4,6 +4,13 @@ import os
 import sys
 import subprocess
 import time
+import argparse
+import textwrap
+
+from fyoutube_V09 import V09
+
+
+
 
 SLEEP_SUBTITLES = '1'
 SLEEP_INTERVAL = '10'
@@ -15,104 +22,100 @@ SUBSCRIPTIONS_FILE = '/home/mbeware/Documents/dev/fyoutube/subscriptions.md'
 
 
 
-def InfoFromPlaylist(url):    
-    cname = url.split('@')[1]
-    print(f"New channel: {cname}" )
-    cmd = [
-            'yt-dlp',
-            '--concurrent-fragments','4', # This might still be useful for processing multiple playlists/channels
-            '--force-write-archive',
-            '--skip-download', 
-            '-P','/mnt/AllVideo/0082-youtube',
-            '-P','temp:tmp',
-            '--download-archive',f'{ARCHIVE_DIR}/archive_{cname}.md',
-            '--yes-playlist',
-            '-O','%(id)s', # Output only the video ID
-            '--flat-playlist', 
-            '--progress',
-            '-q',
-            url,
-    ]       
+def VCurrent():
+    pass
+
+
+VERSION = {'V0.9': V09,
+           "Current": VCurrent,  # Default version
+          }
+
+
+
+def run_config():
+    print("Executing Config function...")
+
+def run_install():
+    print("Executing Install function...")
+
+def run_status():
+    print("Executing Status function...")
+
+
+config = {
+    'SLEEP_SUBTITLES': SLEEP_SUBTITLES,
+    'SLEEP_INTERVAL': SLEEP_INTERVAL,
+    'SLEEP_REQUESTS': SLEEP_REQUESTS,
+    'MAX_SLEEP_INTERVAL': MAX_SLEEP_INTERVAL,
+    'VIDEO_DIR': VIDEO_DIR,
+    'ARCHIVE_DIR': ARCHIVE_DIR,
+    'SUBSCRIPTIONS_FILE': SUBSCRIPTIONS_FILE
+}
+
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="local youtube library",
+                                     epilog=
+'''
+This is a tool using yt-dlp to download videos from YouTube and store them locally to watch them offline, without ads, and without relying on YouTube's servers.\n
+''' + PIRATEMESSAGE)
+
+    # Hidden optional arguments
+    parser.add_argument(
+        "--compatibilitymode",
+        choices=list(VERSION.keys()),
+        default="Current",
+        help=argparse.SUPPRESS
+    )
+    parser.add_argument("--IAmAPirateAndIWillStarveTheCreators",
+        action='store_true',
+        default=False,
+        help=argparse.SUPPRESS
+    )
+    parser.add_argument("-V",
+        "--version",
+        action='store_true',
+        default=False
+        
+    )
+    helpconfig = "Set configuration options for fyoutube:\n"
+    for key in config.keys():
+        helpconfig += f"--{key} (default: {config[key]})\n"
+    subparsers = parser.add_subparsers(dest="command", title="Available commands")
+    sparser = subparsers.add_parser("set",formatter_class=argparse.RawTextHelpFormatter, add_help=False, help=helpconfig)
+    allConfigParams=[]
+    for configoption in config.keys():
+        allConfigParams.append(sparser.add_argument(f"--{configoption}", type=str, default=config[configoption], help=f"Set {configoption}"))
+
+    sparser = subparsers.add_parser("guiconfig", help="Show GUI configuration dialog")
+    sparser = subparsers.add_parser("install",  help="Install fyoutube in the system's scheduler")
+    sparser = subparsers.add_parser("status",  help="Display it fyoutube is currently running, and if it is installed in the system's scheduler")
+
+    return parser.parse_args()
+
     
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
-        if result.returncode == 0:
-            print("Info retrieval completed successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred during Info: {e}")
-        print("Make sure yt-dlp is installed and the playlist URL is valid.")
-        sys.exit(1)
-    except FileNotFoundError:
-        print("Error: yt-dlp not found. Please install it first:")
-        print("pip install yt-dlp")
-        sys.exit(1)
-
-
-def download_playlist(url):    
-    cname = url.split('@')[1]
-    print(f"Processing channel: {cname}" )
-
-    cmd = [
-            'yt-dlp',
-            '--sleep-subtitles',SLEEP_SUBTITLES,
-            '--sleep-interval',SLEEP_INTERVAL,
-            '--sleep-requests',SLEEP_REQUESTS,
-            '--max-sleep-interval',MAX_SLEEP_INTERVAL,
-#            '--concurrent-fragments','4',
-            '--force-write-archive',
-#            '--skip-download',  # Skip downloading videos
-            '-P',VIDEO_DIR,
-            '-P','temp:tmp',
-            '-P','subtitle:subs',
-            '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',
-             '--download-archive',f'{ARCHIVE_DIR}/archive_{cname}.md',
-            '-f','bestvideo+bestaudio/best',
-            '--sub-langs','all,-live_chat',
-            '--embed-subs',
-            '--yes-playlist',
-            '--remux-video', 'mkv',            
-            '--progress',
-            '--xattrs',
-            '--match-filters', '!is_live',
-            '--match-filters', "live_status!='is_upcoming'" ,
-            '--match-filters', "live_status!='not_live'" ,
-            '--no-abort-on-error',
-            '--check-formats',
-#            '--verbose',
-            '-q',
-            url,
-
-    ]
-    
-    try:
-
-        r=subprocess.run(cmd, check=True, capture_output=False)
-
-       
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred during download for [{cname}] but the show must go on!")
-
-    except FileNotFoundError:
-        print("Error: yt-dlp not found. Please install it first:")
-        print("pip install yt-dlp")
-        sys.exit(1)
-
+PIRATEMESSAGE = "\033[1m\033[93m\033[41mUsing this tool means that the video creators are not getting paid for their work, so please consider supporting them directly.\033[0m"
 def main():
-    while True:
-        urls = []
-        with open(SUBSCRIPTIONS_FILE, 'r') as f:
-            urls = f.readlines()    
+    args = parse_arguments()
+    if not args.IAmAPirateAndIWillStarveTheCreators:
+        print(PIRATEMESSAGE)
 
-        for url in urls:  
-            url = url.strip()
-            if url: # Check if the line is not empty
-                cname = url.split('@')[1]             
-                archive_file = f'{ARCHIVE_DIR}/archive_{cname}.md'
-                if not os.path.exists(archive_file): #Don't download old videos
-                    InfoFromPlaylist(url)
-                else:
-                    download_playlist(url)
-        time.sleep(3600)  # Sleep for a while before checking again
+    if args.version:
+        print(f"Version = {args.compatibilitymode}")
+    elif args.command == "guiconfig":
+        run_config()
+    elif args.command == "install":
+        run_install()
+    elif args.command == "status":
+        run_status()
+    elif args.command == "set":
+        print("Set mode activated:")
+        print(args)
+    else:
+        print(f"No action taken.  {args.compatibilitymode=}")
+
+
 
 if __name__ == "__main__":
     main()
@@ -121,9 +124,9 @@ if __name__ == "__main__":
 
 ####
 # Todo : Split the code in two processe. One will build the list of videos to download and the other will download them.
-# Todo : Use yt-dlp python API instead of subprocess
 # Todo : Configuration files in OS appropriate locations
 # Todo : Metadata files in OS appropriate locations
+# Todo : Use yt-dlp python API instead of subprocess
 # Todo : Use a proper logging library instead of print statements
 # Todo : Self register in cron / windows task scheduler
 # Todo : Language support
