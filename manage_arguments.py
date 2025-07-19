@@ -1,18 +1,36 @@
 import Config
 import argparse
 from argparse import  Action
-from types import ModuleType 
+from types import ModuleType
 from importlib import import_module
+from Config import all_options
 
-
+global configurables
 configurables:dict[str,str] = {}
+
+configurables_V09:dict[str,str] = {}
 for name,val in Config.__dict__.items():
     if not name.startswith('__') and not name.startswith('i_')  and not callable(val):
-        configurables[name] = val
+        configurables_V09[name] = val
+
+
+
+
+configurables_new :dict[str,str] = {
+    name: name for name, obj in all_options.items()
+    if obj.active
+}
+
 
 
 def load_fyoutube_version(version:str)->ModuleType:
+    global configurables
     compatibility_mode = version if version in Config.i_VERSIONS else "Current"
+    if compatibility_mode == "V0.9":
+        configurables = configurables_V09
+    else:
+        configurables = configurables_new
+
     module_name = Config.i_VERSIONS[compatibility_mode]
     return import_module(module_name)
 
@@ -20,6 +38,7 @@ def load_fyoutube_version(version:str)->ModuleType:
 
 def define_arguments(parser:argparse.ArgumentParser)->argparse.ArgumentParser:
     # Hidden optional arguments
+    global configurables
     parser.add_argument(
         "--compatibilitymode", "-cm", type=str,
         choices=list(Config.i_VERSIONS.keys()),

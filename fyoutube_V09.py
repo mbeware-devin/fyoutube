@@ -36,11 +36,30 @@ def InfoFromPlaylist(url:str):
         print("pip install yt-dlp")
         sys.exit(1)
 
+def moreinfo(url:str):
+    cname = url.split('@')[1]
+    print(f"Getting more info: {cname}" )
+    moreinfofile = f'{Config.ARCHIVE_DIR}/archive_{cname}_debug.txt'
+          
+    cmd2 = [
+    'yt-dlp',
+    '--skip-download', 
+    '-P','/mnt/AllVideo/0082-youtube',
+    '-P','temp:tmp',
+    '--yes-playlist',
+    '-O','%(id)s', # Output only the video ID
+    '--flat-playlist', 
+    '--progress',
+    '--ignore-errors',
+    '--print-to-file', '***********\n%(id)s-%(title)s\n%(description)s\nrelease date : %(release_date)s\nlive_status:%(live_status)s - is_live:%(is_live)s - was_live:%(was_live)s\nurl:%(webpage_url)s-%(original_url)s', moreinfofile,        
+    url,
+    ]       
+    subprocess.run(cmd2, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
+
 
 def download_playlist(url:str):    
     cname = url.split('@')[1]
     print(f"Processing channel: {cname}" )
-
     cmd:list[str] = [
             'yt-dlp',
             '--sleep-subtitles',Config.SLEEP_SUBTITLES,
@@ -63,28 +82,20 @@ def download_playlist(url:str):
             '--progress',
             '--xattrs',
             '--match-filters', '!is_live',
-            '--match-filters', "live_status!='is_upcoming'" ,
-            '--match-filters', "live_status!='not_live'" ,
             '--no-abort-on-error',
             '--check-formats',
-#            '--verbose',
             '-q',
+            
             url,
     ]
-    
+
     try:
         subprocess.run(cmd, check=True, capture_output=False)
 
     except subprocess.CalledProcessError:
-        print(f"Error occurred during download for [{cname}] - retrying  with verbose")
-        try:
-            cmd_retry:list[str] = list(cmd) 
-            cmd_retry.append('--verbose')
-            cmd_retry.remove('-q')
-            subprocess.run(cmd_retry, check=True, capture_output=False)
-        except FileNotFoundError:
-            print(f"Error occurred during the retry of the download for [{cname}]")
-
+        print(f"Error occurred during download for [{cname}] ")
+        moreinfo(url)
+  
 
     except FileNotFoundError:
         print("Error: yt-dlp not found. Please install it first:")
