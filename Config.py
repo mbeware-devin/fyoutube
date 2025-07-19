@@ -205,8 +205,9 @@ SLEEP_REQUESTS: str = '1'
 MAX_SLEEP_INTERVAL: str = '20'
 VIDEO_DIR: str = '/mnt/AllVideo/0082-youtube'
 ARCHIVE_DIR: str = f'{VIDEO_DIR}/archive'
+LOGS_DIR: str = f'{ARCHIVE_DIR}/logs'
 BASE_DOWNLOAD_LIST : str = '/home/mbeware/Documents/dev/fyoutube'
-SUBSCRIPTIONS_FILE: str = f'{BASE_DOWNLOAD_LIST}/subscriptions.md'
+SUBSCRIPTIONS_FILE: str = f'{BASE_DOWNLOAD_LIST}/subscriptions.list'
 LASTDOWNLOADEDCHANNEL_FILE:str = f'{BASE_DOWNLOAD_LIST}/lastdownloadedchannel.info'
 
 

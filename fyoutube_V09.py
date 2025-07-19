@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def InfoFromPlaylist(url:str):    
+def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):    
     cname = url.split('@')[1]
     print(f"New channel: {cname}" )
     cmd = [
@@ -17,7 +17,7 @@ def InfoFromPlaylist(url:str):
             '--skip-download', 
             '-P','/mnt/AllVideo/0082-youtube',
             '-P','temp:tmp',
-            '--download-archive',f'{Config.ARCHIVE_DIR}/archive_{cname}.md',
+            '--download-archive',downloaded_video_archive_file,
             '--yes-playlist',
 #            '-O','%(id)s', # Output only the video ID
             '--flat-playlist', 
@@ -30,7 +30,7 @@ def InfoFromPlaylist(url:str):
         result = subprocess.run(cmd, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
         if result.returncode == 0:
             print("Info retrieval completed successfully.")
-        Path(f'{Config.ARCHIVE_DIR}/archive_{cname}.md').touch()
+        Path(downloaded_video_archive_file).touch() # just in case there were no video on that channel
         return result.returncode
     
     except subprocess.CalledProcessError as e:
@@ -45,7 +45,7 @@ def InfoFromPlaylist(url:str):
 def moreinfo(url:str):
     cname = url.split('@')[1]
     print(f"Getting more info: {cname}" )
-    moreinfofile = f'{Config.ARCHIVE_DIR}/archive_{cname}_debug.txt'
+    moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_moreinfo_debug.txt'
           
     cmd2 = [
     'yt-dlp',
@@ -65,13 +65,13 @@ def moreinfo(url:str):
 
 def download_playlist(url:str):    
     cname = url.split('@')[1]
-    
-    if not os.path.exists(f'{Config.ARCHIVE_DIR}/archive_{cname}.md'): #New channel - Don't download all old videos
-        return InfoFromPlaylist(url)
+    downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.list'
+    if not os.path.exists(downloaded_video_archive_file): #New channel - Don't download all old videos
+        return InfoFromPlaylist(url,downloaded_video_archive_file)
         
 
     print(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
-    moreinfofile = f'{Config.ARCHIVE_DIR}/archive_{cname}_debug.txt'
+    moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_debug.log'
     cmd:list[str] = [
             'yt-dlp',
             '--sleep-subtitles',Config.SLEEP_SUBTITLES,
@@ -85,7 +85,7 @@ def download_playlist(url:str):
             '-P','temp:tmp',
             '-P','subtitle:subs',
             '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',            
-             '--download-archive',f'{Config.ARCHIVE_DIR}/archive_{cname}.md',
+             '--download-archive',downloaded_video_archive_file,
             '-f','bestvideo+bestaudio/best',
             '--sub-langs','all,-live_chat',
             '--embed-subs',
@@ -105,7 +105,7 @@ def download_playlist(url:str):
     ]
     
     try:
-        with open(f"{Config.ARCHIVE_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
+        with open(f"{Config.LOGS_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
             r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
             return r.returncode
 
