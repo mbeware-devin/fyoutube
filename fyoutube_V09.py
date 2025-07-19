@@ -3,6 +3,7 @@ import sys
 import subprocess
 import time
 import Config
+from datetime import datetime
 
 def InfoFromPlaylist(url:str):    
     cname = url.split('@')[1]
@@ -51,7 +52,7 @@ def moreinfo(url:str):
     '--flat-playlist', 
     '--progress',
     '--ignore-errors',
-    '--print-to-file', '***********\n%(id)s-%(title)s\n%(description)s\nrelease date : %(release_date)s\nlive_status:%(live_status)s - is_live:%(is_live)s - was_live:%(was_live)s\nurl:%(webpage_url)s-%(original_url)s', moreinfofile,        
+    '--print-to-file', '[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
     url,
     ]       
     subprocess.run(cmd2, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
@@ -59,7 +60,8 @@ def moreinfo(url:str):
 
 def download_playlist(url:str):    
     cname = url.split('@')[1]
-    print(f"Processing channel: {cname}" )
+    print(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
+    moreinfofile = f'{Config.ARCHIVE_DIR}/archive_{cname}_debug.txt'
     cmd:list[str] = [
             'yt-dlp',
             '--sleep-subtitles',Config.SLEEP_SUBTITLES,
@@ -80,10 +82,13 @@ def download_playlist(url:str):
             '--yes-playlist',
             '--remux-video', 'mkv',            
             '--progress',
-            '--xattrs',
-            '--match-filters', '!is_live',
+            '--xattrs',    
+            '--match-filters', '!is_live',        
             '--no-abort-on-error',
             '--check-formats',
+            '--ignore-errors',
+            '--restrict-filenames', 
+            '--print-to-file', '[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
             '-q',
             
             url,
@@ -108,7 +113,7 @@ def get_videos():
         urls = []
         with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
             urls = f.readlines()    
-
+        print(f"Here we go for an other round...{datetime.now().strftime('%H:%M:%S')}")
         for url in urls:  
             url = url.strip()
             if url: # Check if the line is not empty
@@ -118,4 +123,5 @@ def get_videos():
                     InfoFromPlaylist(url)
                 else:
                     download_playlist(url)
+        print("Waiting for a bit...")
         time.sleep(600)  # Sleep for a while before checking again
