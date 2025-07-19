@@ -4,6 +4,8 @@ import subprocess
 import time
 import Config
 from datetime import datetime
+from pathlib import Path
+
 
 def InfoFromPlaylist(url:str):    
     cname = url.split('@')[1]
@@ -17,7 +19,7 @@ def InfoFromPlaylist(url:str):
             '-P','temp:tmp',
             '--download-archive',f'{Config.ARCHIVE_DIR}/archive_{cname}.md',
             '--yes-playlist',
-            '-O','%(id)s', # Output only the video ID
+#            '-O','%(id)s', # Output only the video ID
             '--flat-playlist', 
             '--progress',
             '-q',
@@ -28,6 +30,9 @@ def InfoFromPlaylist(url:str):
         result = subprocess.run(cmd, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
         if result.returncode == 0:
             print("Info retrieval completed successfully.")
+        Path(f'{Config.ARCHIVE_DIR}/archive_{cname}.md').touch()
+        return result.returncode
+    
     except subprocess.CalledProcessError as e:
         print(f"Error occurred during Info: {e}")
         print("Make sure yt-dlp is installed and the playlist URL is valid.")
@@ -48,7 +53,7 @@ def moreinfo(url:str):
     '-P','/mnt/AllVideo/0082-youtube',
     '-P','temp:tmp',
     '--yes-playlist',
-    '-O','%(id)s', # Output only the video ID
+    #'-O','%(id)s', # Output only the video ID
     '--flat-playlist', 
     '--progress',
     '--ignore-errors',
@@ -60,6 +65,11 @@ def moreinfo(url:str):
 
 def download_playlist(url:str):    
     cname = url.split('@')[1]
+    
+    if not os.path.exists(f'{Config.ARCHIVE_DIR}/archive_{cname}.md'): #New channel - Don't download all old videos
+        return InfoFromPlaylist(url)
+        
+
     print(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
     moreinfofile = f'{Config.ARCHIVE_DIR}/archive_{cname}_debug.txt'
     cmd:list[str] = [
@@ -74,7 +84,7 @@ def download_playlist(url:str):
             '-P',Config.VIDEO_DIR,
             '-P','temp:tmp',
             '-P','subtitle:subs',
-            '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',
+            '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',            
              '--download-archive',f'{Config.ARCHIVE_DIR}/archive_{cname}.md',
             '-f','bestvideo+bestaudio/best',
             '--sub-langs','all,-live_chat',
@@ -83,45 +93,70 @@ def download_playlist(url:str):
             '--remux-video', 'mkv',            
             '--progress',
             '--xattrs',    
-            '--match-filters', '!is_live',        
+            '--match-filters', "live_status!~=?'post_live|is_live|is_upcoming'",     
             '--no-abort-on-error',
             '--check-formats',
-            '--ignore-errors',
+            '--no-abort-on-error',
             '--restrict-filenames', 
-            '--print-to-file', '[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
+            '--print-to-file', '['+datetime.now().strftime('%Y-%m-%d% %H:%M:%S')+']-[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
             '-q',
-            
+            '--verbose',
             url,
     ]
-
+    
     try:
-        subprocess.run(cmd, check=True, capture_output=False)
+        with open(f"{Config.ARCHIVE_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
+            r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
+            return r.returncode
+
+
 
     except subprocess.CalledProcessError:
         print(f"Error occurred during download for [{cname}] ")
-        moreinfo(url)
+#        moreinfo(url)
+        return 22
   
 
     except FileNotFoundError:
         print("Error: yt-dlp not found. Please install it first:")
         print("pip install yt-dlp")
         sys.exit(1)
+    
+    
 
+def is_next_channel(url:str,last_url:str)-> bool:
+    cname = url.split('@')[1]             
+    lasturlcname = last_url.split('@')[1]             
+    if last_url == url:
+        print(f'found {cname}! - downloading will start with next channel')
+        return True
+    
+    print(f'Looking for {lasturlcname} - skipping {cname} for now')
+    return False
+
+def save_lastchannel(url:str):
+    with open(Config.LASTDOWNLOADEDCHANNEL_FILE, 'w') as lastdownloadedchannel:
+        lastdownloadedchannel.write(url)
+
+def get_lastchannel()->str:
+    with open(Config.LASTDOWNLOADEDCHANNEL_FILE, 'r+') as lastdownloadedchannel:
+        return lastdownloadedchannel.readline()    
 
 def get_videos():
+    last_url = get_lastchannel()
     while True:
         urls = []
         with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
             urls = f.readlines()    
-        print(f"Here we go for an other round...{datetime.now().strftime('%H:%M:%S')}")
+        print(f"{datetime.now().strftime('%H:%M:%S')} - Here we go for an other round...")
         for url in urls:  
             url = url.strip()
-            if url: # Check if the line is not empty
-                cname = url.split('@')[1]             
-                archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.md'
-                if not os.path.exists(archive_file): #Don't download old videos
-                    InfoFromPlaylist(url)
-                else:
-                    download_playlist(url)
+            if url and is_next_channel(url,last_url) if last_url else True: 
+                if last_url:
+                    last_url=None 
+                else:                
+                    if download_playlist(url) == 0:
+                        save_lastchannel(url)
+                
         print("Waiting for a bit...")
         time.sleep(600)  # Sleep for a while before checking again

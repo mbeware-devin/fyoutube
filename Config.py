@@ -204,9 +204,10 @@ SLEEP_INTERVAL: str = '10'
 SLEEP_REQUESTS: str = '1'
 MAX_SLEEP_INTERVAL: str = '20'
 VIDEO_DIR: str = '/mnt/AllVideo/0082-youtube'
-ARCHIVE_DIR: str = '/mnt/AllVideo/0082-youtube/archive'
-SUBSCRIPTIONS_FILE: str = '/home/mbeware/Documents/dev/fyoutube/subscriptions.md'
-
+ARCHIVE_DIR: str = f'{VIDEO_DIR}/archive'
+BASE_DOWNLOAD_LIST : str = '/home/mbeware/Documents/dev/fyoutube'
+SUBSCRIPTIONS_FILE: str = f'{BASE_DOWNLOAD_LIST}/subscriptions.md'
+LASTDOWNLOADEDCHANNEL_FILE:str = f'{BASE_DOWNLOAD_LIST}/lastdownloadedchannel.info'
 
 
 i_PIRATEMESSAGE = "\033[1m\033[93m\033[41mUsing this tool means that the video creators are not getting paid for their work, so please consider supporting them directly.\033[0m"
