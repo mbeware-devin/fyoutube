@@ -1,11 +1,9 @@
-import os
 import sys
 import subprocess
-import time
 import Config
 
 def InfoFromPlaylist(url:str):    
-    cname = url.split('@')[1]
+    cname:str = url.split('@')[1]
     print(f"New channel: {cname}" )
     cmd = [
             'yt-dlp',
@@ -86,20 +84,5 @@ def download_playlist(url:str):
         print("pip install yt-dlp")
         sys.exit(1)
 
-
 def get_videos():
-    while True:
-        urls = []
-        with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
-            urls = f.readlines()    
-
-        for url in urls:  
-            url = url.strip()
-            if url: # Check if the line is not empty
-                cname = url.split('@')[1]             
-                archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.md'
-                if not os.path.exists(archive_file): #Don't download old videos
-                    InfoFromPlaylist(url)
-                else:
-                    download_playlist(url)
-        time.sleep(600)  # Sleep for a while before checking again
+    print("get_videos main")
