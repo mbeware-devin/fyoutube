@@ -70,16 +70,21 @@ def download_playlist(url:str):
 #            '--verbose',
             '-q',
             url,
-
     ]
     
     try:
-
         subprocess.run(cmd, check=True, capture_output=False)
 
-       
     except subprocess.CalledProcessError:
-        print(f"Error occurred during download for [{cname}] but the show must go on!")
+        print(f"Error occurred during download for [{cname}] - retrying  with verbose")
+        try:
+            cmd_retry:list[str] = list(cmd) 
+            cmd_retry.append('--verbose')
+            cmd_retry.remove('-q')
+            subprocess.run(cmd_retry, check=True, capture_output=False)
+        except FileNotFoundError:
+            print(f"Error occurred during the retry of the download for [{cname}]")
+
 
     except FileNotFoundError:
         print("Error: yt-dlp not found. Please install it first:")
