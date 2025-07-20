@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
-
+import logging 
+from datetime import datetime
 
 #@dataclass
 class OptionDescriptor:
@@ -235,6 +236,59 @@ def run_install():
 
 def run_status():
     print("Checking installation status...")
+
+global messagelog
+global channel_info_log_handler
+global channel_debug_log_handler
+global messagelog_formatter 
+
+channel_info_log_handler:logging.Handler|None=None
+channel_debug_log_handler:logging.Handler|None=None
+
+messagelog_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+messagelog = logging.getLogger("fyoutube")
+messagelog.setLevel(logging.DEBUG)
+
+general_handler = logging.FileHandler(f"{LOGS_DIR}/fyoutube.info.log")
+general_handler.setLevel(logging.INFO)
+general_handler.setFormatter(messagelog_formatter)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(messagelog_formatter)
+
+messagelog.addHandler(general_handler)
+messagelog.addHandler(console_handler)
+
+
+def log_channel(channel_name:str):
+    global messagelog
+    global channel_info_log_handler
+    global channel_debug_log_handler
+    if channel_info_log_handler:
+        messagelog.removeHandler(channel_info_log_handler)
+        channel_info_log_handler=None
+    if channel_debug_log_handler:
+        messagelog.removeHandler(channel_debug_log_handler)
+        channel_debug_log_handler=None
+    
+    channel_info_log_handler = logging.FileHandler(f"{LOGS_DIR}/{channel_name}_info.log")
+    channel_debug_log_handler = logging.FileHandler(f"{LOGS_DIR}/{channel_name}_debug.log")
+    channel_info_log_handler.setLevel(logging.INFO)
+    channel_info_log_handler.setFormatter(messagelog_formatter)
+    channel_debug_log_handler.setLevel(logging.DEBUG)
+    channel_debug_log_handler.setFormatter(messagelog_formatter)
+    messagelog.addHandler(channel_info_log_handler)
+    messagelog.addHandler(channel_debug_log_handler)
+
+    
+
+
+
+
+
+
 
 
 

@@ -5,7 +5,7 @@ import time
 import Config
 from datetime import datetime
 from pathlib import Path
-#09S
+
 
 def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):    
     cname = url.split('@')[1]
@@ -64,7 +64,6 @@ def moreinfo(url:str):
 
 
 def download_playlist(url:str):    
-    print("******************************************************************************************************************")
     cname = url.split('@')[1]
     downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.list'
     if not os.path.exists(downloaded_video_archive_file): #New channel - Don't download all old videos
