@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import Config
+import manage_arguments
 from manage_arguments import parse_arguments, load_fyoutube_version
+
 from Config import messagelog
 
 

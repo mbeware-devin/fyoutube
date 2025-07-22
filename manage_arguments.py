@@ -3,7 +3,9 @@ import argparse
 from argparse import  Action
 from types import ModuleType
 from importlib import import_module
-from Config import all_options
+from Config import all_options, messagelog
+
+global g_args
 
 
 global configurables
@@ -33,12 +35,17 @@ def load_fyoutube_version(version:str)->ModuleType:
         configurables = configurables_new
 
     module_name = Config.i_VERSIONS[compatibility_mode]
-    print(f"* using module {module_name} *")
+    message=f"* using module {module_name} *"
+    if messagelog:
+        messagelog.info(message)
+    else:
+        print(message)
     return import_module(module_name)
 
 
 
 def define_arguments(parser:argparse.ArgumentParser)->argparse.ArgumentParser:
+
     # Hidden optional arguments
     global configurables
     parser.add_argument(
@@ -74,10 +81,11 @@ def define_arguments(parser:argparse.ArgumentParser)->argparse.ArgumentParser:
     return parser
 
 def parse_arguments():
-
+    global g_args
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="local youtube library",
                                      epilog=Config.i_EPILOG)
 
     parser = define_arguments(parser)
+    g_args = parser.parse_args()
     return  parser.parse_args()
 

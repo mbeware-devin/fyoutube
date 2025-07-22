@@ -150,7 +150,7 @@ def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):
 
 def moreinfo(url:str):
     cname = Config.get_channel_name(url)
-    print(f"Getting more info: {cname}" )
+    messagelog.info(f"Getting more info: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_moreinfo_debug.txt'
           
     cmd2 = [

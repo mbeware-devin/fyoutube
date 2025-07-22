@@ -105,7 +105,7 @@ def download_playlist(url:str):
     ]
     
     try:
-        with open(f"{Config.LOGS_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
+        with open(f"{Config.LOGS_DIR}/archive_{cname}_stderr.log", 'w') as error_file:
             r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
             return r.returncode
 

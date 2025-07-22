@@ -6,13 +6,17 @@ import Config
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from Config import messagelog
+
+import manage_arguments
+
 
 
 #09S
 
 def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):    
     cname = Config.get_channel_name(url)
-    print(f"New channel: {cname}" )
+    messagelog.info(f"New channel: {cname}" )
     cmd = [
             'yt-dlp',
             '--concurrent-fragments','4', # This might still be useful for processing multiple playlists/channels
@@ -32,22 +36,22 @@ def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):
     try:
         result = subprocess.run(cmd, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
         if result.returncode == 0:
-            print("Info retrieval completed successfully.")
+            messagelog.info("Info retrieval completed successfully.")
         Path(downloaded_video_archive_file).touch() # just in case there were no video on that channel
         return result.returncode
     
     except subprocess.CalledProcessError as e:
-        print(f"Error occurred during Info: {e}")
-        print("Make sure yt-dlp is installed and the playlist URL is valid.")
+        messagelog.critical(f"Error occurred during Info: {e}")
+        messagelog.critical("Make sure yt-dlp is installed and the playlist URL is valid.")
         sys.exit(1)
     except FileNotFoundError:
-        print("Error: yt-dlp not found. Please install it first:")
-        print("pip install yt-dlp")
+        messagelog.critical("Error: yt-dlp not found. Please install it first:")
+        messagelog.critical("pip install yt-dlp")
         sys.exit(1)
 
 def moreinfo(url:str):
     cname =Config.get_channel_name(url)
-    print(f"Getting more info: {cname}" )
+    messagelog.info(f"Getting more info: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_moreinfo_debug.txt'
           
     cmd2 = [
@@ -74,7 +78,7 @@ def download_playlist(url:str):
         return InfoFromPlaylist(url,downloaded_video_archive_file)
         
 
-    print(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
+    messagelog.info(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_debug.log'
     cmd:list[str] = [
             'yt-dlp',
@@ -115,21 +119,21 @@ def download_playlist(url:str):
     #    print(f'{optionitem=}')
     
     try:
-        with open(f"{Config.LOGS_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
+        with open(f"{Config.LOGS_DIR}/archive_{cname}_stderr.log", 'w') as error_file:
             r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
             return r.returncode
 
 
 
     except subprocess.CalledProcessError:
-        print(f"Error occurred during download for [{cname}] ")
+        messagelog.error(f"Error occurred during download for [{cname}] ")
 #        moreinfo(url)
         return 22
   
 
     except FileNotFoundError:
-        print("Error: yt-dlp not found. Please install it first:")
-        print("pip install yt-dlp")
+        messagelog.critical("Error: yt-dlp not found. Please install it first:")
+        messagelog.critical("pip install yt-dlp")
         sys.exit(1)
     
     
@@ -138,10 +142,10 @@ def is_next_channel(url:str,last_url:str)-> bool:
     cname = Config.get_channel_name(url)   
     lasturlcname = Config.get_channel_name(last_url)         
     if last_url == url:
-        print(f'found {cname}! - downloading will start with next channel')
+        messagelog.info(f'found {cname}! - downloading will start with next channel')
         return True
     
-    print(f'Looking for {lasturlcname} - skipping {cname} for now')
+    messagelog.info(f'Looking for {lasturlcname} - skipping {cname} for now')
     return False
 
 def save_lastchannel(url:str):
@@ -153,14 +157,18 @@ def get_lastchannel()->str:
         return lastdownloadedchannel.readline()    
 
 def get_videos():
+    
     last_url = get_lastchannel()
+    loop_count = 0 
+    downloaded_count = 0
     while True:
-        print("* V09 *************************************************************************************************************")
-
+        messagelog.info(f"* V09 *{loop_count=}*{downloaded_count=}***********************************************************************************************************")
+        if not manage_arguments.g_args.IAmAPirateAndIWillStarveTheCreators:
+            messagelog.critical(Config.i_PIRATEMESSAGE)
         urls = []
         with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
             urls = f.readlines()    
-        print(f"{datetime.now().strftime('%H:%M:%S')} - Here we go for an other round...")
+        messagelog.info("Here we go for an other round...")
         for url in urls:  
             url = url.strip()
             if url and is_next_channel(url,last_url) if last_url else True: 
@@ -168,7 +176,9 @@ def get_videos():
                     last_url=None 
                 else:                
                     if download_playlist(url) == 0:
+                        downloaded_count +=1
                         save_lastchannel(url)
-                
-        print("Waiting for a bit...")
-        time.sleep(600)  # Sleep for a while before checking again
+        if loop_count > 0 or downloaded_count > 0:
+            messagelog.info("Waiting for a bit...")
+            time.sleep(600)  # Sleep for a while before checking again
+        loop_count += 1
