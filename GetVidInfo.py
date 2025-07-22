@@ -1,8 +1,9 @@
 import sys
 import subprocess
+import Config
 
 def InfoFromPlaylist(url):    
-    cname = url.split('@')[1]
+    cname = Config.get_channel_name(url)
     print(f"Processing channel: {cname}" )
     cmd = [
             'yt-dlp',

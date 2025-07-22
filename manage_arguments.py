@@ -5,6 +5,7 @@ from types import ModuleType
 from importlib import import_module
 from Config import all_options
 
+
 global configurables
 configurables:dict[str,str] = {}
 
@@ -32,6 +33,7 @@ def load_fyoutube_version(version:str)->ModuleType:
         configurables = configurables_new
 
     module_name = Config.i_VERSIONS[compatibility_mode]
+    print(f"* using module {module_name} *")
     return import_module(module_name)
 
 
@@ -78,6 +80,4 @@ def parse_arguments():
 
     parser = define_arguments(parser)
     return  parser.parse_args()
-
-    
 

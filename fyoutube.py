@@ -3,6 +3,8 @@ import Config
 from manage_arguments import parse_arguments, load_fyoutube_version
 from Config import messagelog
 
+
+
 def main():
 
     
@@ -10,8 +12,7 @@ def main():
     if not args.IAmAPirateAndIWillStarveTheCreators:
         if messagelog :
             messagelog.critical(Config.i_PIRATEMESSAGE)
-        else:
-            print(Config.i_PIRATEMESSAGE)
+        print(Config.i_PIRATEMESSAGE)   
 
     if args.version:
         if messagelog :

@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+
 from typing import Any
 import logging 
-from datetime import datetime
+
+from enum import Enum
 
 #@dataclass
 class OptionDescriptor:
@@ -33,19 +34,19 @@ class OptionDescriptor:
                 info_value:Any|None = None,
                 debug_value:Any|None = None,
                 ) -> None:
-        self.name:str|None = None
-        self.description:str|None = None
-        self.active:bool = False
-        self.info:bool = False
-        self.download:bool = False
-        self.debug:bool = False
-        self.info_required:bool = False
-        self.download_required:bool = False
-        self.debug_required:bool = False
-        self.allowed_values:list[str] = []
-        self.download_value:Any|None = None
-        self.info_value:Any|None = None
-        self.debug_value:Any|None = None
+        self.name:str|None = name
+        self.description:str|None = description
+        self.active:bool = active
+        self.info:bool = info
+        self.download:bool = download
+        self.debug:bool = debug
+        self.info_required:bool = info_required
+        self.download_required:bool = download_required
+        self.debug_required:bool = debug_required
+        self.allowed_values:list[str] = allowed_values
+        self.download_value:Any|None = download_value
+        self.info_value:Any|None = info_value
+        self.debug_value:Any|None = debug_value
 
 
                 
@@ -169,35 +170,6 @@ all_options:dict[str,OptionDescriptor] = {
 for option_name, option_instance in all_options.items():
     option_instance.name = option_name if None else option_instance.name
 
-### How to read a value : 
-## aaa = sleep_interval.info_value if (sleep_interval.info_value is not None and sleep_interval.active and (sleep_interval.info_required or sleep_interval.info)) else None
-### Info
-concurrent_fragment_downloads.info_value = '4'
-force_write_download_archive.info_value = True
-skip_download.info_value = True
-noplaylist.info_value=False
-forceprint.info_value='%(id)s'
-extract_flat.info_value='in_playlist'
-noprogress.info_value=False
-quiet.info_value=True
-### Download 
-sleep_interval_subtitles.download_value = '1'
-sleep_interval.download_value = '10'
-sleep_interval_requests.download_value = '1'
-max_sleep_interval.download_value = '20'
-force_write_download_archive = True
-skip_download.info_value = False
-subtitleslangs.info_value= 'all,-live_chat'
-embedsubtitles.info_value=True
-noplaylist.info_value=False
-remuxvideo.info_value='mkv'
-noprogress.info_value=False
-xattrs.info_value=True
-match_filter.info_value='!is_live'
-ignoreerrors.info_value='only_download'
-check_formats.info_value= 'selected'
-quiet.info_value=True
-
 
 
 SLEEP_SUBTITLES:str ='1'
@@ -210,6 +182,48 @@ LOGS_DIR: str = f'{ARCHIVE_DIR}/logs'
 BASE_DOWNLOAD_LIST : str = '/home/mbeware/Documents/dev/fyoutube'
 SUBSCRIPTIONS_FILE: str = f'{BASE_DOWNLOAD_LIST}/subscriptions.list'
 LASTDOWNLOADEDCHANNEL_FILE:str = f'{BASE_DOWNLOAD_LIST}/lastdownloadedchannel.info'
+
+
+
+
+### How to read a value : 
+## aaa = sleep_interval.info_value if (sleep_interval.info_value is not None and sleep_interval.active and (sleep_interval.info_required or sleep_interval.info)) else None
+### Info
+concurrent_fragment_downloads.info_value = 4
+force_write_download_archive.info_value = True
+skip_download.info_value = True
+noplaylist.info_value=False
+forceprint.info_value='%(id)s'
+extract_flat.info_value='in_playlist'
+noprogress.info_value=False
+quiet.info_value=True
+### Download 
+sleep_interval_subtitles.download_value = 1
+sleep_interval.download_value = 10
+sleep_interval_requests.download_value = 1
+max_sleep_interval.download_value = 20
+force_write_download_archive.download_value = True
+skip_download.download_value = False
+subtitleslangs.download_value= 'all,-live_chat'
+embedsubtitles.download_value=True
+noplaylist.download_value=False
+remuxvideo.download_value='mkv'
+noprogress.download_value=False
+xattrs.download_value=True
+match_filter.download_value= "live_status!~=?'post_live|is_live|is_upcoming'&availability~=?'unlisted|public'"
+ignoreerrors.download_value='only_download'
+check_formats.download_value= 'selected'
+quiet.download_value=True
+paths.download_value={'home':VIDEO_DIR,
+                      'temp':'tmp',
+                      'subtitle':'subs',
+                      'pl_video':VIDEO_DIR,
+                      }
+outtmpl.download_value={'default':'[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s'}
+download_archive.download_value="************************"
+
+
+
 
 
 i_PIRATEMESSAGE = "\033[1m\033[93m\033[41mUsing this tool means that the video creators are not getting paid for their work, so please consider supporting them directly.\033[0m"
@@ -282,14 +296,34 @@ def log_channel(channel_name:str):
     messagelog.addHandler(channel_info_log_handler)
     messagelog.addHandler(channel_debug_log_handler)
 
+class Request_type(Enum):
+    DOWNLOAD_ALL_CHANNEL = 'DOWNLOAD_CHANNEL'
+    DOWNLOAD_ALL_LIST = 'DOWNLOAD_LIST'
+    LIST_VIDEO_CHANNEL = 'LIST_VIDEO_CHANNEL'
+    LIST_VIDEO_PLAYLIST ='LIST_VIDEO_PLAYLIST'
+    LIST_VIDEO_RSS ='LIST_VIDEO_RSS'
+    LIST_RSS_CHANNEL ='LIST_RSS_CHANNEL'
+    LIST_RSS_PLAYLIST ='LIST_RSS_PLAYLIST'
     
 
 
+def build_options(request_type:Request_type|None)->dict[str,Any]:
+    selected_options:dict[str,Any]={}
 
+    for option_name,option in all_options.items():
+        if (option.download_value is not None and option.active and (option.download_required or option.download)):
+            selected_options[option_name]=option.download_value
+            messagelog.debug(f'{option_name=}-{option.download_value=}-{type(option.download_value)=}')
+    return selected_options
+    
 
-
-
-
-
+def get_channel_name(channel_url:str)->str:
+    sep=None
+    if '@' in channel_url:
+        sep = '@'
+    elif '?' in channel_url:
+        sep = '?'
+    cname = channel_url.split(sep)[1] if sep else channel_url
+    return cname
 
 

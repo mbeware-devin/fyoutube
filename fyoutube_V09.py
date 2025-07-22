@@ -5,10 +5,13 @@ import time
 import Config
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+
 #09S
 
 def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):    
-    cname = url.split('@')[1]
+    cname = Config.get_channel_name(url)
     print(f"New channel: {cname}" )
     cmd = [
             'yt-dlp',
@@ -43,7 +46,7 @@ def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):
         sys.exit(1)
 
 def moreinfo(url:str):
-    cname = url.split('@')[1]
+    cname =Config.get_channel_name(url)
     print(f"Getting more info: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_moreinfo_debug.txt'
           
@@ -64,9 +67,9 @@ def moreinfo(url:str):
 
 
 def download_playlist(url:str):    
-    print("******************************************************************************************************************")
-    cname = url.split('@')[1]
-    downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.list'
+    
+    cname = Config.get_channel_name(url)
+    downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_global.list'
     if not os.path.exists(downloaded_video_archive_file): #New channel - Don't download all old videos
         return InfoFromPlaylist(url,downloaded_video_archive_file)
         
@@ -104,6 +107,12 @@ def download_playlist(url:str):
             '--verbose',
             url,
     ]
+    #ytdlp_params:dict[str,Any]=Config.build_options(None)
+    #ytdlp_params['download_archive']=downloaded_video_archive_file
+    #for option_name,option_value in ytdlp_params.items():
+    #    print(f'{option_name=}-{option_value=}-{type(option_value)=}')    
+    #for optionitem in cmd:
+    #    print(f'{optionitem=}')
     
     try:
         with open(f"{Config.LOGS_DIR}/archive_{cname}_{datetime.now().strftime('%Y%m%d%H%M%S')}_error.log", 'w') as error_file:
@@ -126,8 +135,8 @@ def download_playlist(url:str):
     
 
 def is_next_channel(url:str,last_url:str)-> bool:
-    cname = url.split('@')[1]             
-    lasturlcname = last_url.split('@')[1]             
+    cname = Config.get_channel_name(url)   
+    lasturlcname = Config.get_channel_name(last_url)         
     if last_url == url:
         print(f'found {cname}! - downloading will start with next channel')
         return True
@@ -146,6 +155,8 @@ def get_lastchannel()->str:
 def get_videos():
     last_url = get_lastchannel()
     while True:
+        print("* V09 *************************************************************************************************************")
+
         urls = []
         with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
             urls = f.readlines()    
