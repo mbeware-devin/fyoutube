@@ -95,8 +95,8 @@ def download_playlist(url:str):
             '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',            
              '--download-archive',downloaded_video_archive_file,
             '-f','bestvideo+bestaudio/best',
-            '--sub-langs','all,-live_chat',
-            '--embed-subs',
+#            '--sub-langs','all,-live_chat',
+#            '--embed-subs',
             '--yes-playlist',
             '--remux-video', 'mkv',            
             '--progress',
@@ -107,6 +107,8 @@ def download_playlist(url:str):
             '--no-abort-on-error',
             '--restrict-filenames', 
             '--print-to-file', '['+datetime.now().strftime('%Y-%m-%d% %H:%M:%S')+']-[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
+            '--force-keyframes-at-cuts',
+            '--sponsorblock-remove',"sponsor,selfpromo",
             '-q',
             '--verbose',
             url,
@@ -159,6 +161,7 @@ def get_lastchannel()->str:
 def get_videos():
     
     last_url = get_lastchannel()
+    
     loop_count = 0 
     downloaded_count = 0
     while True:
