@@ -9,7 +9,8 @@ from Config import messagelog
 
 def main():
 
-    
+  
+
     args = parse_arguments()
     if not args.IAmAPirateAndIWillStarveTheCreators:
         if messagelog :

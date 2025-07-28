@@ -36,8 +36,8 @@ def get_videos():
         messagelog.info("Here we go for an other round...")
         for url in urls:  
             url = url.strip()
-            cname = Config.get_channel_name(url)
-            if url and is_next_channel(url,last_url) if last_url else True: 
+            
+            if url and url != "" and (is_next_channel(url,last_url) if last_url else True): 
                 if last_url:
                     last_url=None 
                 else:                

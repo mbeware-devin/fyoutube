@@ -1,114 +1,116 @@
-import os
 import sys
 import subprocess
-import time
 import Config
+
 from datetime import datetime
-from pathlib import Path
 
 
-def InfoFromPlaylist(url:str, downloaded_video_archive_file:str):    
-    cname = Config.get_channel_name(url)
-    print(f"New channel: {cname}" )
-    cmd = [
-            'yt-dlp',
-            '--concurrent-fragments','4', # This might still be useful for processing multiple playlists/channels
-            '--force-write-archive',
-            '--skip-download', 
-            '-P','/mnt/AllVideo/0082-youtube',
-            '-P','temp:tmp',
-            '--download-archive',downloaded_video_archive_file,
-            '--yes-playlist',
-#            '-O','%(id)s', # Output only the video ID
-            '--flat-playlist', 
-            '--progress',
-            '-q',
-            url,
-    ]       
-    
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
-        if result.returncode == 0:
-            print("Info retrieval completed successfully.")
-        Path(downloaded_video_archive_file).touch() # just in case there were no video on that channel
-        return result.returncode
-    
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred during Info: {e}")
-        print("Make sure yt-dlp is installed and the playlist URL is valid.")
-        sys.exit(1)
-    except FileNotFoundError:
-        print("Error: yt-dlp not found. Please install it first:")
-        print("pip install yt-dlp")
-        sys.exit(1)
 
-def moreinfo(url:str):
-    cname = Config.get_channel_name(url)
-    print(f"Getting more info: {cname}" )
-    moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_moreinfo_debug.txt'
-          
-    cmd2 = [
-    'yt-dlp',
-    '--skip-download', 
-    '-P','/mnt/AllVideo/0082-youtube',
-    '-P','temp:tmp',
-    '--yes-playlist',
-    #'-O','%(id)s', # Output only the video ID
-    '--flat-playlist', 
-    '--progress',
-    '--ignore-errors',
-    '--print-to-file', '[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
-    url,
-    ]       
-    subprocess.run(cmd2, check=True, capture_output=False) # Keep capture_output=False if you want to see yt-dlp's progress
+def download_video(url:str,cname:str,downloaded_video_archive_file:str,downloaded_video_folder:str,verboselog:str,stdoutlog:str):    
+
+    debuglist=['id','title','playlist_channel_id','playlist_channel''extractor_key','playlist_id','playlist_title','original_url','live_status','is_live','was_live','availability']
+    infoprefix='['
+    infopostfix=']'
+    infoseparator='-'
+
+    stdoutlist=['id','title','playlist_channel']
+    debugtemplate=Config.buildtemplate(debuglist,[],infoseparator,infoprefix,infopostfix)
+    stdouttemplate=Config.buildtemplate(stdoutlist,[],infoseparator,infoprefix,infopostfix)
 
 
-def download_playlist(url:str):    
-    cname = Config.get_channel_name(url)
-    downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_{cname}.list'
-    if not os.path.exists(downloaded_video_archive_file): #New channel - Don't download all old videos
-        return InfoFromPlaylist(url,downloaded_video_archive_file)
-        
 
-    print(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
-    moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_debug.log'
+    progresslist=['info.title','progress.elapsed', 'progress.eta', 'progress.speed']
+    progresstemplate=Config.buildtemplate(progresslist,[],infoseparator,infoprefix,infopostfix)
+
+
     cmd:list[str] = [
             'yt-dlp',
+            ### Downloaded video
+            '--concurrent-fragments','4',            
+            '-P',downloaded_video_folder, # videodownloadfolder
+            '-o','%(upload_date)s-%(title)s_[%(id)s].%(ext)s',    #filename format        
+            '--format','bestvideo*+bestaudio/best',
+            '--remux-video', 'mkv',            
+            '--xattrs',    
+            '--no-check-formats',
+            '--no-abort-on-error',
+            '--restrict-filenames', 
+            '--use-extractors','all', 
+
+            ### Filters
+            '--match-filters', "live_status!~=?'post_live|is_live|is_upcoming'",  
+            '--match-filters', "availability~=?'unlisted|public'",
+            ## Download only videos uploaded <date>. 
+            ## The date can be "YYYYMMDD" 
+            # or in the format [now|today|yesterday][-N[day|week|month|year]].
+            ## E.g. "--date today-2weeks" downloads only videos uploaded on the same day two weeks ago
+
+            #'--date','DATE',
+            #'--datebefore','DATE'  ,
+            '--dateafter',  'now-3day' , 
+            
+            ### subtitle
+            '-P','subtitle:/tmp/fyoutube/subs',
+            '--sub-langs','all,-live_chat',
+            '--embed-subs',
+
+            ### sponsor
+            '--force-keyframes-at-cuts',
+            '--sponsorblock-remove',"sponsor,selfpromo",
+
+
+            ### Limiter
             '--sleep-subtitles',Config.SLEEP_SUBTITLES,
             '--sleep-interval',Config.SLEEP_INTERVAL,
             '--sleep-requests',Config.SLEEP_REQUESTS,
             '--max-sleep-interval',Config.MAX_SLEEP_INTERVAL,
-#            '--concurrent-fragments','4',
+
+            ### Keep downloaded list
             '--force-write-archive',
-#            '--skip-download',  # Skip downloading videos
-            '-P',Config.VIDEO_DIR,
-            '-P','temp:tmp',
-            '-P','subtitle:subs',
-            '-o','[%(upload_date)s]-[%(uploader)s]_[%(title)s].%(ext)s',            
-             '--download-archive',downloaded_video_archive_file,
-            '-f','bestvideo+bestaudio/best',
-            '--sub-langs','all,-live_chat',
-            '--embed-subs',
-            '--yes-playlist',
-            '--remux-video', 'mkv',            
+            '--download-archive',downloaded_video_archive_file,
+
+            ### working dir and other mandatory values
+            '-P','temp:/tmp/fyoutube/tmp',
+
+            ### logs and feedback
             '--progress',
-            '--xattrs',    
-            '--match-filters', "live_status!~=?'post_live|is_live|is_upcoming'",     
-            '--no-abort-on-error',
-            '--check-formats',
-            '--no-abort-on-error',
-            '--restrict-filenames', 
-            '--print-to-file', '['+datetime.now().strftime('%Y-%m-%d% %H:%M:%S')+']-[%(id)s]-[%(title)s]-[release date : %(release_date)s]-[live_status:%(live_status)s]-[is_live:%(is_live)s]-[was_live:%(was_live)s]-[url:%(webpage_url)s]-[%(original_url)s]', moreinfofile,        
-            '-q',
+            ## progress templace can use info about the video with info prefix and progress prefix for progress info
+            ## info attributes : <look for fields in doc>
+            ## progress attributes : elapsed|speed|eta|total
+            '--progress-template','download:'+progresstemplate, 
+            ##'--progress-template','download-title:TEMPLATE', progresstemplate
+            '--progress-template','postprocess:'+progresstemplate,
+            ##'--progress-template','postprocess-title:TEMPLATE',
+
+            '--print',stdouttemplate, # Need --no-simulate to download
+            '--no-simulate',
+            '--print-to-file',debugtemplate, verboselog,            
+            '--quiet',
             '--verbose',
+            '--cookies-from-browser', 'brave',
+
             url,
     ]
-    
-    try:
-        with open(f"{Config.LOGS_DIR}/archive_{cname}_stderr.log", 'w') as error_file:
-            r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
-            return r.returncode
 
+ 
+    try:
+        with open(stdoutlog, 'a') as error_file:
+            error_file.write("*"*(8*12))
+            error_file.write("\n")
+            error_file.write(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
+            error_file.write("\n")
+            error_file.flush()
+
+            r=subprocess.run(cmd, check=True, stdout=None, text=True, stderr=error_file )
+            error_file.write("\n")
+            error_file.flush()
+            error_file.write("\n")
+            error_file.write(f"{datetime.now().strftime('%H:%M:%S')}" )
+            error_file.write("\n")
+            error_file.write("🭶🭷🭸🭹🭺🭻🭻🭺🭹🭸🭷🭶"*8)
+            error_file.write("\n")
+            error_file.flush()
+        return r.returncode
 
 
     except subprocess.CalledProcessError:
@@ -123,40 +125,3 @@ def download_playlist(url:str):
         sys.exit(1)
     
     
-
-def is_next_channel(url:str,last_url:str)-> bool:
-    cname = Config.get_channel_name(url)      
-    lasturlcname = Config.get_channel_name(last_url)           
-    if last_url == url:
-        print(f'found {cname}! - downloading will start with next channel')
-        return True
-    
-    print(f'Looking for {lasturlcname} - skipping {cname} for now')
-    return False
-
-def save_lastchannel(url:str):
-    with open(Config.LASTDOWNLOADEDCHANNEL_FILE, 'w') as lastdownloadedchannel:
-        lastdownloadedchannel.write(url)
-
-def get_lastchannel()->str:
-    with open(Config.LASTDOWNLOADEDCHANNEL_FILE, 'r+') as lastdownloadedchannel:
-        return lastdownloadedchannel.readline()    
-
-def get_videos():
-    last_url = get_lastchannel()
-    while True:
-        urls = []
-        with open(Config.SUBSCRIPTIONS_FILE, 'r') as f:
-            urls = f.readlines()    
-        print(f"{datetime.now().strftime('%H:%M:%S')} - Here we go for an other round...")
-        for url in urls:  
-            url = url.strip()
-            if url and is_next_channel(url,last_url) if last_url else True: 
-                if last_url:
-                    last_url=None 
-                else:                
-                    if download_playlist(url) == 0:
-                        save_lastchannel(url)
-                
-        print("Waiting for a bit...")
-        time.sleep(600)  # Sleep for a while before checking again

@@ -74,14 +74,18 @@ def download_playlist(url:str):
     
     cname = Config.get_channel_name(url)
     downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_global.list'
-    if not os.path.exists(downloaded_video_archive_file): #New channel - Don't download all old videos
-        return InfoFromPlaylist(url,downloaded_video_archive_file)
-        
-
+    channel_config_file = f'{Config.GLOBAL_CONFIGDIR}/{cname}.config'
+    if not os.path.exists(channel_config_file): #New channel - Don't download all old videos
+        r = InfoFromPlaylist(url,downloaded_video_archive_file)
+        if r == 0 :
+            with open(channel_config_file,'a') as f:
+                pass
+    
     messagelog.info(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_debug.log'
     cmd:list[str] = [
             'yt-dlp',
+            '--use-extractors','all', 
             '--sleep-subtitles',Config.SLEEP_SUBTITLES,
             '--sleep-interval',Config.SLEEP_INTERVAL,
             '--sleep-requests',Config.SLEEP_REQUESTS,

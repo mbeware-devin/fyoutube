@@ -1,8 +1,153 @@
 
 from typing import Any
 import logging 
-
 from enum import Enum
+
+
+import tomli
+import tomli_w
+from platformdirs import user_config_path
+import platformdirs
+
+
+class DotDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for thekey, thevalue in self.items():
+            if isinstance(thevalue, dict):
+                self[thekey] = DotDict(thevalue)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError as e:
+            raise AttributeError(key) from e
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def to_dict(self):
+        result = {}
+        for thekey, thevalue in self.items():
+            if isinstance(thevalue, DotDict):
+                result[thekey] = thevalue.to_dict()
+            else:
+                result[thekey] = thevalue
+        return result
+
+
+class UserConfig:
+    def __init__(
+        self,
+        app_name="fyoutube",
+        org_name="mbeware",
+        filename="baseconfig.toml",
+        default_config=None,
+    ):
+        self.config_path = user_config_path(app_name, org_name) / filename
+        self.default_config = default_config or {"Config": {"Empty":"True"},}
+        self._ensure_config_file()
+        self.data = self._load()
+
+    def _ensure_config_file(self):
+        if not self.config_path.exists():
+            print(f"Creating default config at: {self.config_path}")
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.config_path.open("wb") as f:
+                tomli_w.dump(self.default_config, f)
+
+    def _load(self):
+        with self.config_path.open("rb") as f:
+            return DotDict(tomli.load(f))
+
+    def save(self):
+        """Write current config back to the file."""
+        with self.config_path.open("wb") as f:
+            tomli_w.dump(self.data.to_dict(), f)
+
+    def reload(self):
+        """Reload the config from file."""
+        self.data = self._load()
+
+    def __getattr__(self, name):
+        return getattr(self.data, name)
+
+    def _resolve(self,value):
+        t={}
+        lv = value
+        while "%-" in lv:
+            tplv1=lv.partition("%-")
+            tplv2=tplv1[2].partition("-%")
+            p1=tplv1[0]
+            kw=tplv2[0]
+            p2=tplv2[2]
+            print(p1,kw,p2)
+            lv2=f'{p1}{t[kw]}{p2}'
+            print(lv2)
+            lv=lv2
+        return lv
+
+Config_app_name="fyoutube"
+Config_org_name="mbeware"
+Config_filename="baseconfig.toml"
+
+#     SelectedFeatures={'KeepDownloadedVideoList':True,'DownloadVideo':True,'AddSubtitles':True,'FilterSponsor':True,'ShowProgress':True, 'stdouttofile':False, "stderrortofile":True, 'verboseToFile': True}
+
+# from dataclasses import dataclass
+# @dataclass
+# class ParameterConfig:
+#     Optional:bool=False
+#     DefaultValue:Any|None=None
+#     Configurable:bool=True
+# @dataclass
+# class ParameterValue:
+#     current:Any
+#     previous:Any
+#     changed:bool
+#     valid:bool
+
+# @dataclass
+# class FeatureParameter:
+#     parameter:str
+#     config:ParameterConfig
+#     value:ParameterValue
+
+
+# @dataclass
+# class FeatureParameterList:
+#     feature:str
+#     parameters:list[FeatureParameter]
+    
+#     ParametersValues={}
+#     FeatureParameterValues={}
+#     AllFeatureParameterValues={}
+# 'KeepDownloadedVideoList':{'ParamName':{Optional:False,DefaultValue:3,Configurable:True}','DownloadVideo':True,'AddSubtitles':True,'FilterSponsor':True,'ShowProgress':True, 'stdouttofile':False, "stderrortofile":True, 'verboseToFile': True}
+
+
+BaseConfig={        
+            "Paths": {
+                "VIDEO_DIR": f"{platformdirs.user_downloads_path()}", #/mnt/AllVideo/0082-youtube",
+                "ARCHIVE_DIR": '%Paths.VIDEO_DIR%/archive',
+                "LOGS_DIR": '%Paths.ARCHIVE_DIR%/logs',
+                "BASE_DOWNLOAD_LIST" : f'{platformdirs.user_data_path(Config_app_name,Config_org_name)}', #/home/mbeware/Documents/dev/fyoutube',
+                "SUBSCRIPTIONS_FILE": '%BASE_DOWNLOAD_LIST%/subscriptions.list',
+                "LASTDOWNLOADEDCHANNEL_FILE" : '%BASE_DOWNLOAD_LIST%/lastdownloadedchannel.info',
+                
+            },
+            "Sleep": {
+                "SUBTITLES":"1",
+                "INTERVAL":"2",
+                "REQUESTS":"1",
+                "MAX_INTERVAL":"20",
+            }
+        }
+ 
+
+
+USER = UserConfig(app_name="fyoutube",org_name="mbeware",filename="baseconfig.toml",default_config=BaseConfig)
+
+
+
 
 #@dataclass
 class OptionDescriptor:
@@ -49,7 +194,8 @@ class OptionDescriptor:
         self.debug_value:Any|None = debug_value
 
 
-                
+
+
 username=OptionDescriptor()
 password=OptionDescriptor()          
 videopassword=OptionDescriptor()     
@@ -182,6 +328,7 @@ LOGS_DIR: str = f'{ARCHIVE_DIR}/logs'
 BASE_DOWNLOAD_LIST : str = '/home/mbeware/Documents/dev/fyoutube'
 SUBSCRIPTIONS_FILE: str = f'{BASE_DOWNLOAD_LIST}/subscriptions.list'
 LASTDOWNLOADEDCHANNEL_FILE:str = f'{BASE_DOWNLOAD_LIST}/lastdownloadedchannel.info'
+GLOBAL_CONFIGDIR:str = str(platformdirs.user_data_path(Config_app_name,Config_org_name) )
 
 
 
@@ -327,3 +474,93 @@ def get_channel_name(channel_url:str)->str:
     return cname
 
 
+def buildtemplate(nuggetlist:list, bannednuggetlist:list=[], separator:str|None=None,prefix:str|None=None,postfix:str|None=None):
+    template = ""
+    for nugget in nuggetlist:
+        if nugget not in bannednuggetlist:
+            if prefix:
+                template += prefix
+            template += f'%({nugget})s'    
+            if postfix:
+                template += postfix
+            if separator:
+                template += separator
+    return template
+
+
+available_elements = [
+'id',
+'title',
+'fulltitle',
+'ext',
+'alt_title',
+'description',
+'display_id',
+'uploader',
+'uploader_id',
+'uploader_url',
+'license',
+'creators',
+'creator',
+'timestamp',
+'upload_date',
+'release_timestamp',
+'release_date',
+'release_year',
+'modified_timestamp',
+'modified_date',
+'channel',
+'channel_id',
+'channel_url',
+'channel_follower_count',
+'channel_is_verified',
+'location',
+'duration',
+'duration_string',
+'view_count',
+'concurrent_view_count',
+'like_count',
+'dislike_count',
+'repost_count',
+'average_rating',
+'comment_count',
+'age_limit',
+'live_status',
+'is_live',
+'was_live',
+'playable_in_embed',
+'availability',
+'media_type',
+'start_time',
+'end_time',
+'extractor',
+'extractor_key',
+'epoch',
+'autonumber',
+'video_autonumber',
+'n_entries',
+'playlist_id',
+'playlist_title',
+'playlist',
+'playlist_count',
+'playlist_index',
+'playlist_autonumber',
+'playlist_uploader',
+'playlist_uploader_id',
+'playlist_channel',
+'playlist_channel_id',
+'playlist_webpage_url',
+'webpage_url',
+'webpage_url_basename',
+'webpage_url_domain',
+'original_url',
+'categories',
+'tags',
+'cast',
+'urls',
+'filename',
+'formats_table',
+'thumbnails_table',
+'subtitles_table',
+'automatic_captions_table',
+]
