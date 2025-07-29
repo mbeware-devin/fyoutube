@@ -232,7 +232,8 @@ class ConfigEditor:
         try:
             menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
         finally:
-            self.root.after_idle(menu.destroy)
+            pass
+            #self.root.after_idle(menu.destroy)
 
     def edit_menu(self):
         menu = tk.Menu(self.root, tearoff=0, bg='#404040', fg='white')
@@ -242,7 +243,8 @@ class ConfigEditor:
         try:
             menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
         finally:
-            self.root.after_idle(menu.destroy)
+            pass
+            #self.root.after_idle(menu.destroy)
 
     def _menu_command(self, menu, command):
         """Helper method to execute menu command and destroy menu"""
