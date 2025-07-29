@@ -75,11 +75,12 @@ def download_playlist(url:str):
     cname = Config.get_channel_name(url)
     downloaded_video_archive_file = f'{Config.ARCHIVE_DIR}/archive_global.list'
     channel_config_file = f'{Config.GLOBAL_CONFIGDIR}/{cname}.config'
-    if not os.path.exists(channel_config_file): #New channel - Don't download all old videos
+    if True or not os.path.exists(channel_config_file): #New channel - Don't download all old videos
         r = InfoFromPlaylist(url,downloaded_video_archive_file)
         if r == 0 :
             with open(channel_config_file,'a') as f:
                 pass
+    return 0
     
     messagelog.info(f"{datetime.now().strftime('%H:%M:%S')} - Processing channel: {cname}" )
     moreinfofile = f'{Config.LOGS_DIR}/archive_{cname}_debug.log'
