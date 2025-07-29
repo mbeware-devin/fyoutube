@@ -223,26 +223,31 @@ class ConfigEditor:
             
     def file_menu(self):
         menu = tk.Menu(self.root, tearoff=0, bg='#404040', fg='white')
-        menu.add_command(label="Ouvrir config", command=self.open_config)
-        menu.add_command(label="Sauvegarder", command=self.save_config)
-        menu.add_command(label="Sauvegarder sous...", command=self.save_config_as)
+        menu.add_command(label="Ouvrir config", command=lambda: self._menu_command(menu, self.open_config))
+        menu.add_command(label="Sauvegarder", command=lambda: self._menu_command(menu, self.save_config))
+        menu.add_command(label="Sauvegarder sous...", command=lambda: self._menu_command(menu, self.save_config_as))
         menu.add_separator()
-        menu.add_command(label="Quitter", command=self.root.quit)
+        menu.add_command(label="Quitter", command=lambda: self._menu_command(menu, self.root.quit))
         
         try:
             menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
         finally:
-            menu.grab_release()
+            pass
             
     def edit_menu(self):
         menu = tk.Menu(self.root, tearoff=0, bg='#404040', fg='white')
-        menu.add_command(label="Réinitialiser", command=self.reset_config)
-        menu.add_command(label="Valeurs par défaut", command=self.load_defaults)
+        menu.add_command(label="Réinitialiser", command=lambda: self._menu_command(menu, self.reset_config))
+        menu.add_command(label="Valeurs par défaut", command=lambda: self._menu_command(menu, self.load_defaults))
         
         try:
             menu.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
         finally:
-            menu.grab_release()
+            pass
+
+    def _menu_command(self, menu, command):
+        """Helper method to execute menu command and destroy menu"""
+        menu.destroy()
+        command()
             
     def help_menu(self):
         messagebox.showinfo("Aide", "Éditeur de configuration fyoutube\n\nUtilisez les onglets pour configurer les différents aspects du téléchargeur.")
